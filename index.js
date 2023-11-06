@@ -28,6 +28,7 @@ async function run() {
     const blogCollection = client.db("botsDB").collection("blogs");
     const userCollection = client.db("botsDB").collection("users");
     const commentCollection = client.db("botsDB").collection("comments");
+    const wishlistCollection = client.db("botsDB").collection("wishlist");
 
     //service
     app.get("/blogs", async (req, res) => {
@@ -40,7 +41,7 @@ async function run() {
       const blogs = req.body;
       const result = await blogCollection.insertOne(blogs);
       res.send(result);
-      console.log(result);
+      //console.log(result);
     });
 
     app.get("/blogs/:id", async (req, res) => {
@@ -48,46 +49,76 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       console.log(query);
       const result = await blogCollection.findOne(query);
-      console.log(result);
+      //console.log(result);
       res.send(result);
     });
 
-    app.put('/blogs/:id', async (req, res) => {
+    app.put("/blogs/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: new ObjectId(id) }
+      const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateBlog = req.body;
 
       const blog = {
-          $set: {
-            title: updateBlog.title,
-            category: updateBlog.category,
-            date: updateBlog.date,
-            shortDescription: updateBlog.shortDescription,
-            longDescription: updateBlog.longDescription,
-            picture: updateBlog.picture,
-            authorEmail: updateBlog.authorEmail,
-          }
-      }
+        $set: {
+          title: updateBlog.title,
+          category: updateBlog.category,
+          date: updateBlog.date,
+          shortDescription: updateBlog.shortDescription,
+          longDescription: updateBlog.longDescription,
+          picture: updateBlog.picture,
+          authorEmail: updateBlog.authorEmail,
+        },
+      };
 
       const result = await blogCollection.updateOne(filter, blog, options);
       res.send(result);
+     // console.log(result);
+    });
+
+    //comment
+    app.get("/comments", async (req, res) => {
+      const cursor = commentCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.post("/comments", async (req, res) => {
+      const comments = req.body;
+      const result = await commentCollection.insertOne(comments);
+      res.send(result);
+      //console.log(result);
+    });
+
+    // wishlist related apis
+    app.get("/wishlist", async (req, res) => {
+      const cursor = wishlistCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.post("/wishlist", async (req, res) => {
+      const newItem = req.body;
+      //console.log(newItem);
+      const result = await wishlistCollection.insertOne(newItem);
+      res.send(result);
+    });
+
+    app.get("/wishlist/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await wishlistCollection.findOne(query);
+      res.send(result);
       console.log(result)
-  })
+    });
 
-   //comment
-   app.get("/comments", async (req, res) => {
-    const cursor = commentCollection.find();
-    const result = await cursor.toArray();
-    res.send(result);
-  });
-
-  app.post("/comments", async (req, res) => {
-    const comments = req.body;
-    const result = await commentCollection.insertOne(comments);
-    res.send(result);
-    console.log(result);
-  });
+    app.delete("/wishlist/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await wishlistCollection.deleteOne(query);
+      res.send(result);
+      //console.log(result)
+    });
 
     // users
     app.get("/users", async (req, res) => {
@@ -98,7 +129,7 @@ async function run() {
 
     app.post("/users", async (req, res) => {
       const user = req.body;
-      console.log(user);
+      //console.log(user);
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
