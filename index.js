@@ -51,6 +51,28 @@ async function run() {
       res.send(result);
     });
 
+    app.put('/blogs/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const updateBlog = req.body;
+
+      const blog = {
+          $set: {
+            title: updateBlog.title,
+            category: updateBlog.category,
+            date: updateBlog.date,
+            shortDescription: updateBlog.shortDescription,
+            longDescription: updateBlog.longDescription,
+            picture: updateBlog.picture,
+          }
+      }
+
+      const result = await blogCollection.updateOne(filter, blog, options);
+      res.send(result);
+      console.log(result)
+  })
+
     // users
     app.get("/users", async (req, res) => {
       const cursor = userCollection.find();
