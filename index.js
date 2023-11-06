@@ -27,6 +27,7 @@ async function run() {
 
     const blogCollection = client.db("botsDB").collection("blogs");
     const userCollection = client.db("botsDB").collection("users");
+    const commentCollection = client.db("botsDB").collection("comments");
 
     //service
     app.get("/blogs", async (req, res) => {
@@ -65,6 +66,7 @@ async function run() {
             shortDescription: updateBlog.shortDescription,
             longDescription: updateBlog.longDescription,
             picture: updateBlog.picture,
+            authorEmail: updateBlog.authorEmail,
           }
       }
 
@@ -72,6 +74,20 @@ async function run() {
       res.send(result);
       console.log(result)
   })
+
+   //comment
+   app.get("/comments", async (req, res) => {
+    const cursor = commentCollection.find();
+    const result = await cursor.toArray();
+    res.send(result);
+  });
+
+  app.post("/comments", async (req, res) => {
+    const comments = req.body;
+    const result = await commentCollection.insertOne(comments);
+    res.send(result);
+    console.log(result);
+  });
 
     // users
     app.get("/users", async (req, res) => {
