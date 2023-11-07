@@ -50,7 +50,7 @@ async function run() {
     app.get("/blogs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      console.log(query);
+      //console.log(query);
       const result = await blogCollection.findOne(query);
       //console.log(result);
       res.send(result);
@@ -103,7 +103,7 @@ async function run() {
 
     app.post("/wishlist", async (req, res) => {
       const newItem = req.body;
-      //console.log(newItem);
+      console.log(newItem);
       const result = await wishlistCollection.insertOne(newItem);
       res.send(result);
     });
@@ -111,9 +111,10 @@ async function run() {
     app.get("/wishlist/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
+      console.log(query);
       const result = await wishlistCollection.findOne(query);
+      console.log(result);
       res.send(result);
-      console.log(result)
     });
 
     app.delete('/wishlist/:id', async (req, res) => {
