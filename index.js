@@ -13,9 +13,9 @@ const { JsonWebTokenError } = require("jsonwebtoken");
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
-      // 'https://car-doctor-8ffa1.web.app',
-      // 'https://car-doctor-8ffa1.firebaseapp.com'
+      'http://localhost:5173',
+      'https://bytes-of-thoughts.web.app',
+      'https://bytes-of-thoughts.firebaseapp.com'
     ],
     credentials: true,
   })
