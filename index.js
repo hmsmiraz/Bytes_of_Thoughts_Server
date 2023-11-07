@@ -5,11 +5,25 @@ const port = process.env.port || 5000;
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const ObjectId = require("mongodb").ObjectId;
 require("dotenv").config();
-
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const { JsonWebTokenError } = require("jsonwebtoken");
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      // 'https://car-doctor-8ffa1.web.app',
+      // 'https://car-doctor-8ffa1.firebaseapp.com'
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
+
+// node -> require('crypto').randomBytes(64).toString('hex')
 
 // const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.meftkqt.mongodb.net/?retryWrites=true&w=majority`;
@@ -23,6 +37,32 @@ const client = new MongoClient(uri, {
   },
 });
 
+//middlewares
+const logger = async (req, res, next) => {
+  console.log("Log Info:", req.method, req.url);
+  next();
+};
+
+const verifyToken = async (req, res, next) => {
+  const token = req?.cookies?.token;
+  console.log("Token from middleware- ", token);
+  // for no token
+  if (!token) {
+    return res.status(401).send({ message: "Not authorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    // error
+    if (error) {
+      console.log(error);
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    //decoded
+    console.log("Value in the token- ", decoded);
+    req.user = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -33,8 +73,31 @@ async function run() {
     const commentCollection = client.db("botsDB").collection("comments");
     const wishlistCollection = client.db("botsDB").collection("wishlist");
 
+    //auth
+    app.post("/jwt",  async (req, res) => {
+      const user = req.body;
+      // console.log(user);
+      // res.send(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ Success: true });
+    });
+
+    app.post('/logout', async(req, res)=>{
+      const user = req.body;
+      console.log("Log out", user);
+      res.clearCookie('token', {maxAge: 0 }).send({ Success: true });
+    });
+
     //service
-    app.get("/blogs", async (req, res) => {
+    app.get("/blogs",  async (req, res) => {
       const cursor = blogCollection.find();
       const result = await cursor.toArray();
       res.send(result);
@@ -55,7 +118,6 @@ async function run() {
       //console.log(result);
       res.send(result);
     });
-    
 
     app.put("/blogs/:id", async (req, res) => {
       const id = req.params.id;
@@ -72,12 +134,14 @@ async function run() {
           longDescription: updateBlog.longDescription,
           picture: updateBlog.picture,
           authorEmail: updateBlog.authorEmail,
+          blogOwner: updateBlog.blogOwner,
+          blogOwnerProfilePicture: updateBlog.blogOwnerProfilePicture,
         },
       };
 
       const result = await blogCollection.updateOne(filter, blog, options);
       res.send(result);
-     // console.log(result);
+      // console.log(result);
     });
 
     //comment
@@ -95,20 +159,30 @@ async function run() {
     });
 
     // wishlist related apis
-    app.get("/wishlist", async (req, res) => {
+    app.get("/wishlist", logger, verifyToken, async (req, res) => {
+      // console.log(req.query.email);
+      // console.log("token- ", req.cookies.token);
+      // console.log("User from valid token", req.user);
+      if(req.user.email !== req.query.email){
+        return res.status(403).send({ message: "Forbidden Access"});
+      }
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email }
+      }
       const cursor = wishlistCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.post("/wishlist", async (req, res) => {
+    app.post("/wishlist",  async (req, res) => {
       const newItem = req.body;
       console.log(newItem);
       const result = await wishlistCollection.insertOne(newItem);
       res.send(result);
     });
 
-    app.get("/wishlist/:id", async (req, res) => {
+    app.get("/wishlist/:id",  async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       console.log(query);
@@ -117,30 +191,30 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/wishlist/:id', async (req, res) => {
+    app.delete("/wishlist/:id",  async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       console.log(query);
       const result = await wishlistCollection.deleteOne(query);
       res.send(result);
-      console.log(result)
+      console.log(result);
     });
 
     // users
-    app.get("/users", async (req, res) => {
+    app.get("/users",  async (req, res) => {
       const cursor = userCollection.find();
       const users = await cursor.toArray();
       res.send(users);
     });
 
-    app.post("/users", async (req, res) => {
+    app.post("/users",  async (req, res) => {
       const user = req.body;
       //console.log(user);
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
 
-    app.patch("/users", async (req, res) => {
+    app.patch("/users",  async (req, res) => {
       const user = req.body;
       const filter = { email: user.email };
       const updateDoc = {
